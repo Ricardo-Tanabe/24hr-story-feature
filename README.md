@@ -1,3 +1,36 @@
+# 24hr Story Feature
+Será criado um recurso similar ao "Story" encontrado nas plataformas de mídia social como Instagram e Whatsapp. O objetivo é permitir um usuário postar "short", conteúdo efêmero que desaparece após 24 horas. Considerando que esse é um projeto Frontend, vai funcionar apenas no lado do cliente.
+
+Link para o [Projeto 24hr Story Feature](https://roadmap.sh/projects/stories-feature)
+
+## Requisitos
+ - No topo deve haver um botão de adicionar Story's e espaço para adicionar os demais elementos.
+ - Clicando no botão de adicionar é permitido realizar upload de uma imagem que vai ser convertido para base64 e armazenada em local storage.
+ - As imagens serão apresentadas em uma lista de stories.
+ - A imagem vai ser removida após 24 horas. 
+ - O usuário deve opcionalmente ser capazes de delizar pelas stories.
+
+## Restrições
+ - Pode usar qualquer framework frontend em sua construção.
+ - Livre para usar qualquer biblioteca ou ferramenta.
+ - O projeto deve ser feito apenas no client-side.
+ - O projeto deve ser responsivo.
+ - As dimensões das imagens não devem ultrapassar 1080px x 1920px
+
+## Ferramentas utilizadas no desenvolvimento
+
+- HTML
+- [Tailwind CSS](https://tailwindcss.com/): Framework
+- [Typescript](https://www.typescriptlang.org/)
+- [React](https://react.dev/)
+    - Framework: [Nextjs](https://nextjs.org/)
+    - Servidor: [Descrito abaixo](#getting-started)
+- [VS Code Studio](https://code.visualstudio.com/)
+
+___
+
+## Next.js default README.md
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
