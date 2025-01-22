@@ -1,3 +1,5 @@
+import { StoriesData } from "./interface";
+
 export function convertImageToBase64(file: File): Promise<string | ArrayBuffer | null> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -7,14 +9,17 @@ export function convertImageToBase64(file: File): Promise<string | ArrayBuffer |
     })
 }
 
-export function saveImageToLocalStorage(key: string, image: string | ArrayBuffer | null): void {
-    if (typeof image === 'string') {
-        localStorage.setItem(key, image);
-    }
+export function saveImageToLocalStorage(storieList: StoriesData[]): void {
+    localStorage.setItem('storieList', JSON.stringify(storieList));
 }
 
-export function getImageFromLocalStorage(key: string): string | null {
-    return localStorage.getItem(key);
+export function getImageFromLocalStorage(): StoriesData[] | null {
+    const storedStorieList = localStorage.getItem('storieList');
+    if(storedStorieList) {
+        const parsedStorieList: StoriesData[] = JSON.parse(storedStorieList);
+        return parsedStorieList;
+    }
+    return null;
 }
 
 export function isLocalStorageFull(newItemSize: number): boolean {
@@ -28,5 +33,5 @@ export function isLocalStorageFull(newItemSize: number): boolean {
         }
     }
 
-    return (totalSize + newItemSize) > 5 * 10124 * 1024
+    return (totalSize + newItemSize) > 5 * 1024 * 1024
 }

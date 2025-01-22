@@ -4,19 +4,20 @@ import { convertImageToBase64,
          getImageFromLocalStorage,
          saveImageToLocalStorage,
          isLocalStorageFull } from "./handleImages";
-import { AddNewStorieProp, StoriesBarProp, FloatStoriePopUpProp } from './interface'
+import { AddNewStoryProp,
+         StoryProp,
+         StoriesBarProp,
+         FloatStoryPopUpProp,
+         ShowSelectedStoriesProp,
+         StoriesData } from './interface'
 import { PiImages } from "react-icons/pi";
+import { v4 as uuidv4 } from 'uuid';
 
-function AddNewStorie({activatePopUp}: AddNewStorieProp) {
-  return (
-    <div onClick={activatePopUp}
-        className="flex items-center justify-center cursor-pointer bg-gray-300 rounded-full text-black w-10 h-10 hover:bg-gray-100">
-      +
-    </div>
-  );
-}
-
-function FloatStoriePopUp({ isAddStorie }: FloatStoriePopUpProp) {
+function FloatStoryPopUp({ isAddStory, addStory }: FloatStoryPopUpProp) {
+  const css_flex = "flex items-center justify-center"
+  const css_color = "bg-black bg-opacity-50"
+  const css_group = "group-hover:text-gray-600"
+  const css_shape = "rounded-lg w-96 h-48"
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -24,7 +25,7 @@ function FloatStoriePopUp({ isAddStorie }: FloatStoriePopUpProp) {
       try {
         const base64String = await convertImageToBase64(file);
         if (typeof base64String === 'string' && !isLocalStorageFull(base64String.length)) {
-          saveImageToLocalStorage('storieImage', base64String);
+          addStory(base64String);
           console.log('Imagem salva em Local Storage');
         } else {
           console.error('Local Storage está cheio ou a imagem é muito grande')
@@ -36,12 +37,11 @@ function FloatStoriePopUp({ isAddStorie }: FloatStoriePopUpProp) {
   }
 
   return (
-    <div className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ${isAddStorie ? '' : 'hidden'}`}>
-      <div className="abolute flex flex-col items-center justify-center rounded-lg bg-white w-96 h-48">
-        {/* Espaço onde será inserido as opções de selecionar imagens no upload */}
-        <p className="flex flex-row items-center group mb-3">
-          <PiImages className="mr-2 group-hover:text-gray-600" size={40}/>
-          <span className="font-bold text-3xl group-hover:text-gray-600">Fotos</span>
+    <div className={`fixed inset-0 ${css_flex} ${css_color} ${isAddStory ? '' : 'hidden'}`}>
+      <div className={`abolute ${css_flex} ${css_shape} flex-col bg-white`}>
+        <p className={`${css_flex} flex-row group mb-3`}>
+          <PiImages className={`mr-2 ${css_group}`} size={40}/>
+          <span className={`font-bold text-3xl ${css_group}`}>Fotos</span>
         </p>
         <input type="file" onChange={handleFileChange} />
       </div>
@@ -49,50 +49,116 @@ function FloatStoriePopUp({ isAddStorie }: FloatStoriePopUpProp) {
   );
 }
 
-function StoriesBar({activatePopUp}: StoriesBarProp) {
-  return(
-    <div className=" flex flex-row border-2 rounded-lg border-white border-solid max-w-[1080px] mx-auto h-16 p-2">
-      <AddNewStorie activatePopUp={activatePopUp}/>
+function AddNewStory({activatePopUp}: AddNewStoryProp) {
+  const css_flex = "flex items-center justify-center"
+  const css_color = "bg-gray-300 text-black hover:bg-gray-100"
+  const css_shape = "mr-2 w-10 h-10 rounded-full cursor-pointer"
+
+  return (
+    <div onClick={activatePopUp}
+        className={`${css_flex} ${css_color} ${css_shape}`}>
+      +
     </div>
   );
 }
 
-function ShowSelectedStories() {
-  const [image, setImage] = useState<string | null>(null);
+// Função ClearLocalStorage temporaria
+function ClearLocalStorage() {
+  const css_flex = "flex items-center justify-center"
+  const css_color = "bg-red-500 text-black hover:bg-red-300"
+  const css_shape = "w-10 h-10 rounded-full cursor-pointer"
+  
+  return (
+    <div onClick={() => {localStorage.clear(); window.location.reload();}}
+        className={`${css_flex} ${css_color} ${css_shape}`}>
+      Teste
+    </div>
+  );
+}
+// Função ClearLocalStorage temporaria
+
+function Story({ story, index, selectStory, removeStory }: StoryProp) {
+  const css_flex = "flex items-center justify-center";
+  const css_border = "hover:border-2 hover:border-white";
+  const css_shape = "mr-2 w-10 h-10 rounded-full cursor-pointer";
 
   useEffect(() => {
-    const storedImage = getImageFromLocalStorage('storieImage');
+    const now = new Date();
+    const deleteTime = new Date(story.deleteTime);
+
+    if(now >= deleteTime) {
+      removeStory(story);
+    } else {
+      const timeout = setTimeout(() => {
+        removeStory(story);
+      }, deleteTime.getTime() - now.getTime());
+
+      return () => clearTimeout(timeout);
+    }
+  }, [story]);
+
+  return (
+    <div key={story.key} className={`${css_flex} ${css_shape} ${css_border} overflow-hidden`}>
+      <img src={story.content} alt={`Storie ${story.key}`} 
+        className="w-full h-full object-cover" onClick={() => selectStory(story)}/>
+    </div>
+    );
+}
+
+function StoriesBar({ storyList, selectStory, removeStory, activatePopUp }: StoriesBarProp) {
+  const css_border  ="border-2 border-white border-solid";
+  const css_shape = "max-w-[1080px] mx-auto h-16 p-2 rounded-lg";
+
+  const imageList: JSX.Element[] = storyList.map((story, index) => (
+    <Story key={story.key} story={story} index={index}
+      selectStory={selectStory} removeStory={removeStory} />
+  ));
+
+  return(
+    <div className={`flex flex-row ${css_border} ${css_shape}`}>
+      <AddNewStory activatePopUp={activatePopUp}/>
+      { imageList.length > 0 && imageList }
+      <ClearLocalStorage />
+    </div>
+  );
+}
+
+function ShowSelectedStories({ image, setImageList }: ShowSelectedStoriesProp) {
+  const css_flex = "flex items-center justify-center";
+  const css_shape = "max-w-[1080px] max-h-[1920px] my-4 mx-auto"; //min-h-96 
+  const css_border = "border-2 border-white border-solid rounded-lg";
+
+  useEffect(() => {
+    const storedImage = getImageFromLocalStorage();
     if(storedImage) {
-      setImage(storedImage)
+      setImageList(storedImage)
     }
   }, [])
 
   return (
-    <div className="border-2 rounded-lg border-white border-solid max-w-[1080px] h-[1920px] my-4 mx-auto">
-      {/* Mostrar os arquivos selecionados */}
-      {image && <img src={image} alt='Storie' />}
+    <div className={`relative ${css_flex} ${css_shape} ${css_border} overflow-hidden min-h-screen`}>
+      <div className={`absolute border-2 border-white border-solid top-0 h-4 w-full`}>
+        <div className={`bg-white h-full`} style={{animation: "progressBar 3s linear infinite"}}></div>
+      </div>
+      {image ? (<img src={image} alt='Storie'
+        className="max-w-full max-h-full object-contain"/>) :
+        (<div className="text-white">Poste um novo Story</div>)
+      }
     </div>
   );
 }
 
 export default function Page() {
-  const [isAddStorie, setIsAddStorie] = useState<boolean>(false);
-  const [storieList, setStorieList] = useState<JSX.Element[]>([]);
+  const [isAddStory, setIsAddStorie] = useState<boolean>(false);
+  const [storyList, setStorieList] = useState<StoriesData[]>([]);
+  const [image, setImage] = useState<string | null>(null);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [timerKey, setTimerKey] = useState<number>(0);
+  const [animationKey, setAnimationKey] = useState(0);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if(event.key === 'Enter') {
-        event.preventDefault();
-        setIsAddStorie(prev => {
-          if(prev === true) {
-            return false;
-          }
-          return prev;
-        });
-      }
-
-      if(event.key === 'Escape') {
-        console.log(isAddStorie)
+      if(event.key === 'Enter' || event.key === 'Escape') {
         event.preventDefault();
         setIsAddStorie(prev => {
           if(prev === true) {
@@ -110,19 +176,87 @@ export default function Page() {
     };
   },[])
 
+  useEffect(() => {
+    if(storyList.length > 0) {
+      const timer = setInterval(() => {
+        setCurrentIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % storyList.length;
+          setImage(storyList[nextIndex].content);
+          return nextIndex
+        }
+      )}, 3000);
+
+      return () => clearInterval(timer);
+    }
+  },[storyList, timerKey]);
+
+  useEffect(() => {
+    saveImageToLocalStorage(storyList);
+  }, [storyList])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAnimationKey(prevKey => prevKey + 1);
+    }, 3000);
+  
+    return () => clearInterval(interval);
+  }, []);
+
+  function addStory(content: string) {
+    const createTime = new Date();
+    const deleteTime = new Date(createTime.getTime() + 24*60*60*1000); // 24*60*60*1000
+    const newStorie: StoriesData = {key: uuidv4(), content, createTime, deleteTime};
+    setStorieList(prevList => {
+      const newList = [...prevList, newStorie];
+      setCurrentIndex(newList.length - 1);
+      return newList;
+    });
+    setIsAddStorie(false);
+    setImage(newStorie.content);
+    setTimerKey(prevKey => prevKey + 1);
+    setAnimationKey(prevKey => prevKey + 1);
+  }
+
+  function selectStory(story: StoriesData) {
+    setImage(story.content);
+    const index = storyList.findIndex(item => item.key === story.key);
+    setCurrentIndex(index);
+    setTimerKey(prevKey => prevKey + 1);
+    setAnimationKey(prevKey => prevKey + 1);
+  }
+
+  function removeStory (story: StoriesData) {
+    setStorieList(prevList => {
+      const newList = prevList.filter(item => item.key !== story.key);
+      if(story.content === image) {
+        if(newList.length > 0) {
+          setImage(newList[0].content);
+          setCurrentIndex(0);
+        } else {
+          setImage(null);
+          setCurrentIndex(0);
+        }
+      }
+      return newList
+    });
+    setTimerKey(prevKey => prevKey + 1);
+    setAnimationKey(prevKey => prevKey + 1);
+  }
+
+  function setImageList (storageStorieList: StoriesData[]) {
+    setStorieList(storageStorieList)
+  }
+
   function activatePopUp() {
     setIsAddStorie(true);
   }
 
   return(
-    <div className={`bg-black w-full h-full p-4`}>
-      <div>
-        <StoriesBar activatePopUp={activatePopUp}/>
-        <ShowSelectedStories />
-      </div>
-      <FloatStoriePopUp isAddStorie={isAddStorie}/>
+    <div className={`bg-black w-full min-h-screen p-4`}>
+      <StoriesBar storyList={storyList} selectStory={selectStory}
+        removeStory={removeStory} activatePopUp={activatePopUp}/>
+      <ShowSelectedStories image={image} setImageList={setImageList}/>
+      <FloatStoryPopUp isAddStory={isAddStory} addStory={addStory}/>
     </div>
   );
 }
-
-// Imagem de <a href="https://pixabay.com/pt/users/aleem_khan-17859281/?utm_source=link-attribution&utm_medium=referral&utm_campaign=image&utm_content=5587706">Aleem_khan</a> por <a href="https://pixabay.com/pt//?utm_source=link-attribution&utm_medium=referral&utm_campaign=image&utm_content=5587706">Pixabay</a>
