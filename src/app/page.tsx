@@ -71,13 +71,13 @@ function ClearLocalStorage() {
   return (
     <div onClick={() => {localStorage.clear(); window.location.reload();}}
         className={`${css_flex} ${css_color} ${css_shape}`}>
-      Teste
+      <span className="text-xs text-center">Clear List</span>
     </div>
   );
 }
 // Função ClearLocalStorage temporaria
 
-function Story({ story, index, selectStory, removeStory }: StoryProp) {
+function Story({ story, selectStory, removeStory }: StoryProp) {
   const css_flex = "flex items-center justify-center";
   const css_border = "hover:border-2 hover:border-white";
   const css_shape = "mr-2 w-10 h-10 rounded-full cursor-pointer";
@@ -105,13 +105,13 @@ function Story({ story, index, selectStory, removeStory }: StoryProp) {
     );
 }
 
-function StoriesBar({ storyList, selectStory, removeStory, activatePopUp }: StoriesBarProp) {
+function StoriesBar({ image, storyList, selectStory, removeStory, activatePopUp }: StoriesBarProp) {
   const css_border  ="border-2 border-white border-solid";
   const css_shape = "max-w-[1080px] mx-auto h-16 p-2 rounded-lg";
 
   const imageList: JSX.Element[] = storyList.map((story, index) => (
-    <Story key={story.key} story={story} index={index}
-      selectStory={selectStory} removeStory={removeStory} />
+    <Story key={story.key} story={story}
+    selectStory={selectStory} removeStory={removeStory} />
   ));
 
   return(
@@ -123,10 +123,15 @@ function StoriesBar({ storyList, selectStory, removeStory, activatePopUp }: Stor
   );
 }
 
-function ShowSelectedStories({ image, setImageList }: ShowSelectedStoriesProp) {
+function ShowSelectedStories({ image, listLength, currentIndex, setImageList }: ShowSelectedStoriesProp) {
+  const [localAnimationKey, setLocalAnimationKey] = useState<number>(currentIndex);
   const css_flex = "flex items-center justify-center";
   const css_shape = "max-w-[1080px] max-h-[1920px] my-4 mx-auto"; //min-h-96 
   const css_border = "border-2 border-white border-solid rounded-lg";
+
+  useEffect(() => {
+    setLocalAnimationKey(prevKey => prevKey + 1);
+  }, [listLength, currentIndex])
 
   useEffect(() => {
     const storedImage = getImageFromLocalStorage();
@@ -135,10 +140,17 @@ function ShowSelectedStories({ image, setImageList }: ShowSelectedStoriesProp) {
     }
   }, [])
 
+  function setAnimation(): string {
+    if(listLength > 1 && localAnimationKey > 0) {
+      return "progressBar 3s linear";
+    }
+    return "";
+  }
+
   return (
     <div className={`relative ${css_flex} ${css_shape} ${css_border} overflow-hidden min-h-screen`}>
       <div className={`absolute border-2 border-white border-solid top-0 h-4 w-full`}>
-        <div className={`bg-white h-full`} style={{animation: "progressBar 3s linear infinite"}}></div>
+        <div key={localAnimationKey} className={`bg-white h-full`} style={{animation: setAnimation()}}></div>
       </div>
       {image ? (<img src={image} alt='Storie'
         className="max-w-full max-h-full object-contain"/>) :
@@ -150,11 +162,10 @@ function ShowSelectedStories({ image, setImageList }: ShowSelectedStoriesProp) {
 
 export default function Page() {
   const [isAddStory, setIsAddStorie] = useState<boolean>(false);
-  const [storyList, setStorieList] = useState<StoriesData[]>([]);
+  const [storyList, setStoryList] = useState<StoriesData[]>([]);
   const [image, setImage] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [timerKey, setTimerKey] = useState<number>(0);
-  const [animationKey, setAnimationKey] = useState(0);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -194,19 +205,11 @@ export default function Page() {
     saveImageToLocalStorage(storyList);
   }, [storyList])
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAnimationKey(prevKey => prevKey + 1);
-    }, 3000);
-  
-    return () => clearInterval(interval);
-  }, []);
-
   function addStory(content: string) {
     const createTime = new Date();
-    const deleteTime = new Date(createTime.getTime() + 24*60*60*1000); // 24*60*60*1000
+    const deleteTime = new Date(createTime.getTime() + 24*60*60*1000); // Remover após 24 horas -> 24*60*60*1000
     const newStorie: StoriesData = {key: uuidv4(), content, createTime, deleteTime};
-    setStorieList(prevList => {
+    setStoryList(prevList => {
       const newList = [...prevList, newStorie];
       setCurrentIndex(newList.length - 1);
       return newList;
@@ -214,37 +217,47 @@ export default function Page() {
     setIsAddStorie(false);
     setImage(newStorie.content);
     setTimerKey(prevKey => prevKey + 1);
-    setAnimationKey(prevKey => prevKey + 1);
   }
 
   function selectStory(story: StoriesData) {
-    setImage(story.content);
-    const index = storyList.findIndex(item => item.key === story.key);
-    setCurrentIndex(index);
-    setTimerKey(prevKey => prevKey + 1);
-    setAnimationKey(prevKey => prevKey + 1);
+    if(story.content !== image) {
+      const index = storyList.findIndex(item => item.key === story.key);
+      setImage(story.content);
+      setCurrentIndex(index);
+      setTimerKey(prevKey => prevKey + 1);
+    }
   }
 
   function removeStory (story: StoriesData) {
-    setStorieList(prevList => {
+    setStoryList(prevList => {
       const newList = prevList.filter(item => item.key !== story.key);
-      if(story.content === image) {
-        if(newList.length > 0) {
-          setImage(newList[0].content);
-          setCurrentIndex(0);
+      if(newList.length > 0) {
+        const currentIndex = prevList.findIndex(item => item.key === story.key);
+        if(currentIndex !== -1 && prevList[currentIndex].content === image) {
+          const nextIndex = (currentIndex + 1) % newList.length;
+          setImage(newList[nextIndex].content);
+          setCurrentIndex(nextIndex);
         } else {
-          setImage(null);
-          setCurrentIndex(0);
+          const index = newList.findIndex(item => item.content === image);
+          if(index !== -1) {
+            setImage(newList[index].content);
+            setCurrentIndex(index)
+          } else {
+            setImage(newList[0].content);
+            setCurrentIndex(0)
+          }
         }
+      } else {
+        setImage(null);
+        setCurrentIndex(0);
       }
-      return newList
+      return newList;
     });
     setTimerKey(prevKey => prevKey + 1);
-    setAnimationKey(prevKey => prevKey + 1);
   }
 
   function setImageList (storageStorieList: StoriesData[]) {
-    setStorieList(storageStorieList)
+    setStoryList(storageStorieList)
   }
 
   function activatePopUp() {
@@ -253,9 +266,9 @@ export default function Page() {
 
   return(
     <div className={`bg-black w-full min-h-screen p-4`}>
-      <StoriesBar storyList={storyList} selectStory={selectStory}
+      <StoriesBar image={image} storyList={storyList} selectStory={selectStory}
         removeStory={removeStory} activatePopUp={activatePopUp}/>
-      <ShowSelectedStories image={image} setImageList={setImageList}/>
+      <ShowSelectedStories image={image} listLength={storyList.length} currentIndex={currentIndex} setImageList={setImageList}/>
       <FloatStoryPopUp isAddStory={isAddStory} addStory={addStory}/>
     </div>
   );
